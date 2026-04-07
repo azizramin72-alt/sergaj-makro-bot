@@ -1,41 +1,16 @@
-from flask_cors import CORS
 import discord
-import json
-import os
 import random
 import string
-from datetime import datetime, timedelta
+import json
+import os
 from flask import Flask, request, jsonify
-import threading
+from threading import Thread
 
 # =========================
 # CONFIG
 # =========================
-TOKEN = os.getenv("TOKEN")  # Discord Bot Token
-ADMIN_ID = 1370498558419140628  # ⚠️ HIER DEINE DISCORD ID EINTRAGEN
-
+ADMIN_ID = 123456789  # DEINE DISCORD ID
 DB = "keys.json"
-
-# =========================
-# DATABASE
-# =========================
-def load():
-    try:
-        with open(DB, "r") as f:
-            return json.load(f)
-    except:
-        return {}
-
-def save(data):
-    try:
-        with open(DB, "w") as f:
-            json.dump(data, f, indent=2)
-    except:
-        pass
-
-def gen_key():
-    part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    return f"SERGAJ-{part}"
 
 # =========================
 # DISCORD BOT
@@ -43,6 +18,20 @@ def gen_key():
 intents = discord.Intents.default()
 intents.message_content = True
 bot = discord.Client(intents=intents)
+
+def load_keys():
+    if not os.path.exists(DB):
+        return {}
+    with open(DB, "r") as f:
+        return json.load(f)
+
+def save_keys(data):
+    with open(DB, "w") as f:
+        json.dump(data, f, indent=2)
+
+def gen_key():
+    part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    return f"SERGAJ-{part}"
 
 @bot.event
 async def on_ready():
@@ -58,91 +47,72 @@ async def on_message(msg):
         return
 
     args = msg.content.split()
-
-    if not args:
-        return
-
     cmd = args[0]
 
     # KEY ERSTELLEN
     if cmd == "!genkey":
-        days = int(args[1]) if len(args) > 1 else 30
         key = gen_key()
+        keys = load_keys()
+        keys[key] = True
+        save_keys(keys)
 
-        db = load()
-        expire = (datetime.now() + timedelta(days=days)).isoformat()
+        await msg.channel.send(f"✅ Key erstellt:\n`{key}`")
 
-        db[key] = {
-            "banned": False,
-            "expires": expire,
-            "used": False
-        }
+    # KEY LÖSCHEN
+    elif cmd == "!delkey":
+        if len(args) < 2:
+            return await msg.channel.send("❌ !delkey KEY")
 
-        save(db)
+        key = args[1]
+        keys = load_keys()
 
-        await msg.channel.send(f"✅ Key: `{key}`\n📅 {days} Tage gültig")
+        if key in keys:
+            del keys[key]
+            save_keys(keys)
+            await msg.channel.send("🗑️ gelöscht")
+        else:
+            await msg.channel.send("❌ nicht gefunden")
 
-    # KEY INFO
-    elif cmd == "!keyinfo":
-        key = args[1] if len(args) > 1 else ""
-        db = load()
+    # LISTE
+    elif cmd == "!list":
+        keys = load_keys()
+        if not keys:
+            return await msg.channel.send("Keine Keys")
 
-        if key not in db:
-            await msg.channel.send("❌ Key nicht gefunden")
-            return
-
-        k = db[key]
-        await msg.channel.send(f"🔑 {key}\n{str(k)}")
+        text = "\n".join(keys.keys())
+        await msg.channel.send(f"🔑 Keys:\n{text}")
 
 # =========================
 # FLASK API
 # =========================
 app = Flask(__name__)
 
-@app.route("/login", methods=["POST"])
-def login():
-    data = request.get_json()
-    key = data.get("key", "").upper()
+@app.route("/validate", methods=["POST"])
+def validate():
+    data = request.json
+    key = data.get("key")
 
-    print("LOGIN REQUEST:", key)
+    keys = load_keys()
 
-    db = load()
-    print("DB:", db)
+    if key == "SERGAJ-FREE":
+        return jsonify({"valid": True})
 
-    if key not in db:
-        return jsonify({"status": "error", "reason": "KEY NOT FOUND"})
+    if key in keys:
+        return jsonify({"valid": True})
+    else:
+        return jsonify({"valid": False})
 
-    k = db[key]
-
-    if k["banned"]:
-        return jsonify({"status": "error", "reason": "BANNED"})
-
-    if k.get("used"):
-        return jsonify({"status": "error", "reason": "ALREADY USED"})
-
-    expire = datetime.fromisoformat(k["expires"])
-    if datetime.now() > expire:
-        return jsonify({"status": "error", "reason": "EXPIRED"})
-
-    # KEY ALS BENUTZT MARKIEREN
-    db[key]["used"] = True
-    save(db)
-
-    return jsonify({"status": "ok"})
+@app.route("/")
+def home():
+    return "API läuft!"
 
 # =========================
-# START THREADS
+# RUN BEIDES
 # =========================
 def run_bot():
-    bot.run(TOKEN)
+    bot.run(os.getenv("TOKEN"))
 
-def run_web():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+Thread(target=run_bot).start()
 
-# =========================
-# MAIN
-# =========================
-if __name__ == "__main__":
-    threading.Thread(target=run_bot).start()
-    run_web()
+port = int(os.getenv("PORT", 8080))
+app.run(host="0.0.0.0", port=port)
