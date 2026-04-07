@@ -110,4 +110,4 @@ async def on_message(msg):
         await msg.channel.send(f"🗑️ `{key}` gelöscht.")
 
 # 🚀 START (richtig für Railway)
-bot.run(os.getenv("TOKEN"))
+bot.run(os.getenv("DISCORD_TOKEN"))
