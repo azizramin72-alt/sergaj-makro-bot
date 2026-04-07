@@ -109,4 +109,4 @@ async def on_message(msg):
         save(db)
         await msg.channel.send(f"🗑️ `{key}` gelöscht.")
 
-bot.run("MTQ5MDkzNDkwNzc1OTc1NTMxNA.GB_4kP.zjUvVMpAo0d5EpN-xwTXqlEjFFIOVclH2EOP4E")
+client.run(os.getenv("TOKEN"))
