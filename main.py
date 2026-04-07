@@ -5,7 +5,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-ADMIN_ID = 123456789  # Deine Discord ID (Zahl)
+ADMIN_ID = 1370498558419140628  # Deine Discord ID (Zahl)
 
 intents = discord.Intents.default()
 intents.message_content = True
