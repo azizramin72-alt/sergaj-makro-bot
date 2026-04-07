@@ -5,7 +5,6 @@ import json
 import os
 from datetime import datetime, timedelta
 
-TOKEN = "DEIN_TOKEN_HIER"
 ADMIN_ID = 123456789  # Deine Discord ID (Zahl)
 
 intents = discord.Intents.default()
@@ -36,6 +35,7 @@ async def on_ready():
 async def on_message(msg):
     if msg.author.bot:
         return
+
     if msg.author.id != ADMIN_ID:
         await msg.channel.send("❌ Keine Berechtigung.")
         return
@@ -109,4 +109,5 @@ async def on_message(msg):
         save(db)
         await msg.channel.send(f"🗑️ `{key}` gelöscht.")
 
-client.run(os.getenv("TOKEN"))
+# 🚀 START (richtig für Railway)
+bot.run(os.getenv("TOKEN"))
