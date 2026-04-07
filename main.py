@@ -109,4 +109,4 @@ async def on_message(msg):
         save(db)
         await msg.channel.send(f"🗑️ `{key}` gelöscht.")
 
-bot.run("MTQ5MDkzNDkwNzc1OTc1NTMxNA.GH1a98.PZPXjb1YfpBb9zGa7cY1MyvYP1D4oaQ2ye88GQ")
+bot.run("MTQ5MDkzNDkwNzc1OTc1NTMxNA.GB_4kP.zjUvVMpAo0d5EpN-xwTXqlEjFFIOVclH2EOP4E")
