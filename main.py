@@ -1,3 +1,4 @@
+from flask_cors import CORS
 import discord
 import json
 import os
