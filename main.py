@@ -5,7 +5,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-ADMIN_ID = 1370498558419140628  # Deine Discord ID (Zahl)
+ADMIN_ID = 1370498558419140628  # DEINE ID
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -27,6 +27,13 @@ def gen_key():
     part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
     return f"SERGAJ-{part}"
 
+def parse_days(arg):
+    try:
+        # erlaubt "30" oder "30d"
+        return int(arg.replace("d", ""))
+    except:
+        return None
+
 @bot.event
 async def on_ready():
     print(f"Bot online: {bot.user}")
@@ -37,77 +44,136 @@ async def on_message(msg):
         return
 
     if msg.author.id != ADMIN_ID:
-        await msg.channel.send("❌ Keine Berechtigung.")
-        return
+        return  # KEINE SPAM NACHRICHTEN
 
     args = msg.content.strip().split()
-    cmd = args[0] if args else ""
+    if not args:
+        return
 
+    cmd = args[0].lower()
+
+    # 🔑 KEY GENERIEREN
     if cmd == "!genkey":
-        days = int(args[1]) if len(args) > 1 else 30
+        days = 30
+
+        if len(args) > 1:
+            parsed = parse_days(args[1])
+            if parsed is None:
+                await msg.channel.send("❌ Beispiel: `!genkey 30` oder `!genkey 30d`")
+                return
+            days = parsed
+
         key = gen_key()
         db = load()
+
         expire = (datetime.now() + timedelta(days=days)).isoformat()
         db[key] = {"banned": False, "expires": expire}
-        save(db)
-        await msg.channel.send(f"✅ Key: `{key}`\n📅 Gültig: **{days} Tage**")
 
+        save(db)
+
+        await msg.channel.send(
+            f"✅ Key erstellt:\n`{key}`\n📅 Gültig: **{days} Tage**"
+        )
+
+    # 🔨 BAN
     elif cmd == "!bankey":
         if len(args) < 2:
-            await msg.channel.send("❌ Syntax: `!bankey SERGAJ-XXXX`")
+            await msg.channel.send("❌ `!bankey SERGAJ-XXXX`")
             return
-        key = args[1]
+
+        key = args[1].upper()
         db = load()
+
         if key not in db:
             await msg.channel.send("❌ Key nicht gefunden.")
             return
+
         db[key]["banned"] = True
         save(db)
+
         await msg.channel.send(f"🔨 `{key}` gebannt.")
 
+    # ✅ UNBAN
     elif cmd == "!unbankey":
-        key = args[1] if len(args) > 1 else ""
+        if len(args) < 2:
+            await msg.channel.send("❌ `!unbankey SERGAJ-XXXX`")
+            return
+
+        key = args[1].upper()
         db = load()
+
         if key not in db:
             await msg.channel.send("❌ Key nicht gefunden.")
             return
+
         db[key]["banned"] = False
         save(db)
+
         await msg.channel.send(f"✅ `{key}` entbannt.")
 
+    # 🔍 INFO
     elif cmd == "!keyinfo":
-        key = args[1] if len(args) > 1 else ""
+        if len(args) < 2:
+            await msg.channel.send("❌ `!keyinfo SERGAJ-XXXX`")
+            return
+
+        key = args[1].upper()
         db = load()
+
         if key not in db:
             await msg.channel.send("❌ Key nicht gefunden.")
             return
+
         k = db[key]
         exp = datetime.fromisoformat(k["expires"])
         left = (exp - datetime.now()).days
-        status = "❌ Gebannt" if k["banned"] else "✅ Aktiv"
-        await msg.channel.send(f"🔑 `{key}`\nStatus: {status}\nNoch: **{left} Tage**")
 
+        status = "❌ Gebannt" if k["banned"] else "✅ Aktiv"
+
+        await msg.channel.send(
+            f"🔑 `{key}`\nStatus: {status}\n⏳ Noch: **{left} Tage**"
+        )
+
+    # 📋 LISTE
     elif cmd == "!listkeys":
         db = load()
+
         if not db:
             await msg.channel.send("Keine Keys vorhanden.")
             return
+
         lines = []
+
         for k, v in db.items():
             left = (datetime.fromisoformat(v["expires"]) - datetime.now()).days
             icon = "❌" if v["banned"] else "✅"
             lines.append(f"{icon} `{k}` — {left}d")
+
         await msg.channel.send("**Keys:**\n" + "\n".join(lines))
 
+    # 🗑️ DELETE
     elif cmd == "!delkey":
-        key = args[1] if len(args) > 1 else ""
+        if len(args) < 2:
+            await msg.channel.send("❌ `!delkey SERGAJ-XXXX`")
+            return
+
+        key = args[1].upper()
         db = load()
+
         if key not in db:
             await msg.channel.send("❌ Key nicht gefunden.")
             return
+
         del db[key]
         save(db)
+
         await msg.channel.send(f"🗑️ `{key}` gelöscht.")
 
-# 🚀 START (richtig für Railway)
-bot.run(os.getenv("TOKEN"))
+
+# 🚀 START
+TOKEN = os.getenv("TOKEN")
+
+if not TOKEN:
+    print("❌ TOKEN fehlt in Railway ENV!")
+else:
+    bot.run(TOKEN)
