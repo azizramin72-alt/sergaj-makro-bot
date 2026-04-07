@@ -9,7 +9,7 @@ from threading import Thread
 # =========================
 # CONFIG
 # =========================
-ADMIN_ID = 123456789  # DEINE DISCORD ID
+ADMIN_ID = 1370498558419140628  # DEINE DISCORD ID
 DB = "keys.json"
 
 # =========================
