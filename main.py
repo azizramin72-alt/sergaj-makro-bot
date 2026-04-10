@@ -44,7 +44,7 @@ def save(data):
 
 def gen_key():
     part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    return f"SERGAJ-{part}"
+    return f"BIGRED-{part}"
 
 # =====================
 # API ROUTES
@@ -69,7 +69,34 @@ def validate():
 
 @app.route("/", methods=["GET"])
 def index():
-    return jsonify({"status": "SERGAJ Server online"})
+    return jsonify({"status": "Big Red Server online"})
+
+# =====================
+# EMBED HELPER
+# =====================
+async def send_key_embed(user, key, days, product="Big Red Optimizer"):
+    expire_date = (datetime.now() + timedelta(days=days)).strftime("%d.%m.%Y")
+    duration_text = "OneTime" if days <= 1 else f"{days} Days"
+
+    embed = discord.Embed(
+        title="Big Red | Key Generation",
+        color=0xE53935  # Rot passend zum Branding
+    )
+    embed.add_field(name="\u200b", value="● Key Generation Request Successful.", inline=False)
+    embed.add_field(name="\u200b", value=f"● Your License for **{product}** is:", inline=False)
+    embed.add_field(name="\u200b", value=f"```{key}```", inline=False)
+    embed.add_field(name="● Duration:", value=duration_text, inline=True)
+    embed.add_field(name="● Product:", value=product, inline=True)
+    embed.add_field(name="● Expires:", value=expire_date, inline=True)
+    embed.add_field(
+        name="● Instruction:",
+        value="https://twitch.tv/kevinheadred",
+        inline=False
+    )
+    embed.set_footer(text=f"Auth - Big Red  •  {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    embed.set_thumbnail(url="https://i.imgur.com/your-logo.png")  # Logo URL hier eintragen
+
+    await user.send(embed=embed)
 
 # =====================
 # DISCORD EVENTS
@@ -104,22 +131,15 @@ async def on_message(msg):
         db[key] = {"banned": False, "expires": expire}
         save(db)
 
-        # Check if a user was mentioned
         if msg.mentions:
             user = msg.mentions[0]
             try:
-                await user.send(
-                    f"🔑 **Your SERGAJ License Key**\n\n"
-                    f"```{key}```\n"
-                    f"✅ Valid for **{days} days**\n"
-                    f"📅 Expires: {(datetime.now() + timedelta(days=days)).strftime('%d.%m.%Y')}\n\n"
-                    f"Download SERGAJ and enter your key to get started!"
-                )
+                await send_key_embed(user, key, days)
                 await msg.channel.send(
                     f"✅ Key generated and sent to {user.mention} via DM!\n"
                     f"🔑 `{key}` — **{days} days**"
                 )
-            except:
+            except discord.Forbidden:
                 await msg.channel.send(
                     f"✅ Key generated but couldn't DM {user.mention} (DMs closed)\n"
                     f"🔑 `{key}` — **{days} days**"
@@ -134,7 +154,7 @@ async def on_message(msg):
     # !bankey [key]
     elif cmd == "!bankey":
         if len(args) < 2:
-            return await msg.channel.send("❌ Usage: `!bankey SERGAJ-XXXXXXXX`")
+            return await msg.channel.send("❌ Usage: `!bankey BIGRED-XXXXXXXX`")
         key = args[1].upper()
         db = load()
         if key not in db:
@@ -146,7 +166,7 @@ async def on_message(msg):
     # !unbankey [key]
     elif cmd == "!unbankey":
         if len(args) < 2:
-            return await msg.channel.send("❌ Usage: `!unbankey SERGAJ-XXXXXXXX`")
+            return await msg.channel.send("❌ Usage: `!unbankey BIGRED-XXXXXXXX`")
         key = args[1].upper()
         db = load()
         if key not in db:
@@ -158,7 +178,7 @@ async def on_message(msg):
     # !keyinfo [key]
     elif cmd == "!keyinfo":
         if len(args) < 2:
-            return await msg.channel.send("❌ Usage: `!keyinfo SERGAJ-XXXXXXXX`")
+            return await msg.channel.send("❌ Usage: `!keyinfo BIGRED-XXXXXXXX`")
         key = args[1].upper()
         db = load()
         if key not in db:
@@ -186,7 +206,6 @@ async def on_message(msg):
             left = (exp - datetime.now()).days
             icon = "❌" if v["banned"] else ("⚠️" if left < 0 else "✅")
             lines.append(f"{icon} `{k}` — {left}d")
-        # Split into chunks if too many keys
         chunk = ""
         for line in lines:
             if len(chunk) + len(line) > 1800:
@@ -199,7 +218,7 @@ async def on_message(msg):
     # !delkey [key]
     elif cmd == "!delkey":
         if len(args) < 2:
-            return await msg.channel.send("❌ Usage: `!delkey SERGAJ-XXXXXXXX`")
+            return await msg.channel.send("❌ Usage: `!delkey BIGRED-XXXXXXXX`")
         key = args[1].upper()
         db = load()
         if key not in db:
@@ -211,7 +230,7 @@ async def on_message(msg):
     # !help
     elif cmd == "!help":
         await msg.channel.send(
-            "**SERGAJ Bot Commands**\n\n"
+            "**Big Red Bot Commands**\n\n"
             "`!genkey <days> [@user]` — Generate a key\n"
             "`!bankey <key>` — Ban a key\n"
             "`!unbankey <key>` — Unban a key\n"
