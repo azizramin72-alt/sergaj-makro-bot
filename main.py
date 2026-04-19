@@ -223,13 +223,16 @@ async def close_ticket(channel: discord.TextChannel, guild: discord.Guild, close
     if transcript_ch:
         user = guild.get_member(info["user_id"])
         cat  = TICKET_CATEGORIES.get(info.get("category", ""), {"label": "Support", "emoji": "🎫"})
+        user_str = user.mention if user else "<@" + str(info["user_id"]) + ">"
+        opened_ts = int(datetime.fromisoformat(info["created_at"]).timestamp())
+        closed_str = closed_by.mention if closed_by else "Auto-Close ⏰"
         embed = discord.Embed(
             title=f"📋 Transcript — #{channel.name}",
             description=(
-                f"**User:** {user.mention if user else f'<@{info[\"user_id\"]}>'}\n"
+                f"**User:** {user_str}\n"
                 f"**Category:** {cat['emoji']} {cat['label']}\n"
-                f"**Opened:** <t:{int(datetime.fromisoformat(info['created_at']).timestamp())}:F>\n"
-                f"**Closed by:** {closed_by.mention if closed_by else 'Auto-Close ⏰'}\n"
+                f"**Opened:** <t:{opened_ts}:F>\n"
+                f"**Closed by:** {closed_str}\n"
                 f"**Messages:** {len(messages)}"
             ),
             color=VALORA_COLOR,
@@ -557,10 +560,4 @@ async def cmd_autoclose(interaction: discord.Interaction, enabled: bool):
     save_tickets(tickets_data)
     status = "✅ enabled" if enabled else "❌ disabled"
     embed = discord.Embed(description=f"Auto-close is now **{status}** for this ticket.", color=VALORA_COLOR)
-    await interaction.response.send_message(embed=embed)
-
-
-# ============================================================
-#  RUN
-# ============================================================
-bot.run(TOKEN)
+    await interaction.response.send_message(embed=
