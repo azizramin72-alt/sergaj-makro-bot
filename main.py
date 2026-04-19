@@ -12,7 +12,7 @@ import threading
 # CONFIG
 # =====================
 TOKEN = os.getenv("DISCORD_TOKEN")
-ADMIN_ID = 1370498558419140628
+ADMIN_ID = 1370498558419140628 1142943810222047272
 DB = "keys.json"
 SECRET = os.getenv("SECRET", "sergajsecret")
 
