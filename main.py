@@ -456,6 +456,48 @@ async def cmd_autoclose(interaction: discord.Interaction, enabled: bool):
 @app_commands.guild_only()
 async def cmd_verifypanel(interaction: discord.Interaction):
     if not is_admin(interaction.user):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
+    import urllib.parse
+
+    # Redirect URL (MUSS encoded sein)
+    redirect_uri = urllib.parse.quote(f"{WEB_BASE_URL}/callback", safe="")
+
+    # OAuth URL (correct Discord format)
+    oauth_url = (
+        f"https://discord.com/oauth2/authorize"
+        f"?client_id={CLIENT_ID}"
+        f"&redirect_uri={redirect_uri}"
+        f"&response_type=code"
+        f"&scope=identify%20guilds.join"
+    )
+
+    embed = discord.Embed(
+        title="🔐 Valora Verification",
+        description=(
+            "**Verify your Discord account to gain access to the server.**\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "🔒 Why verify?\n"
+            "Keeps the server safe from bots.\n\n"
+            "✅ What happens?\n"
+            "You get the Verified role.\n\n"
+            "👉 Click the button below to continue."
+        ),
+        color=VALORA_COLOR,
+        timestamp=datetime.now(timezone.utc)
+    )
+
+    if VALORA_LOGO:
+        embed.set_thumbnail(url=VALORA_LOGO)
+
+    embed.set_footer(text="Valora Store • Secure Verification 🔐")
+
+    await interaction.response.send_message("✅ Verify panel sent!", ephemeral=True)
+    await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))@bot.tree.command(name="verifypanel", description="Send the verification panel (Admin only)")
+@app_commands.guild_only()
+async def cmd_verifypanel(interaction: discord.Interaction):
+    if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
 
     redirect_uri = f"{WEB_BASE_URL}/callback"
@@ -490,68 +532,6 @@ async def cmd_verifypanel(interaction: discord.Interaction):
 
     await interaction.response.send_message("✅ Verify panel sent!", ephemeral=True)
     await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
-
-
-@bot.tree.command(name="joinserver", description="Force-add a verified user to a server (Admin only)")
-@app_commands.describe(user="The Discord user to add", guild_id="Target server ID", role_id="Optional role ID to assign (from that server)")
-@app_commands.guild_only()
-async def cmd_joinserver(interaction: discord.Interaction, user: discord.Member, guild_id: str, role_id: str = ""):
-    """
-    Manually trigger a guild join for a verified user.
-    The user must have verified first (their token must be saved).
-    """
-    if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
-
-    uid = str(user.id)
-    if uid not in verified_data or "access_token" not in verified_data[uid]:
-        await interaction.response.send_message("❌ This user has not verified yet or token is missing.", ephemeral=True)
-        return
-
-    access_token = verified_data[uid]["access_token"]
-    await interaction.response.defer(ephemeral=True)
-
-    import aiohttp
-    headers = {"Authorization": f"Bot {TOKEN}", "Content-Type": "application/json"}
-    payload = {"access_token": access_token}
-    if role_id.strip().isdigit():
-        payload["roles"] = [int(role_id)]
-
-    url = f"https://discord.com/api/v10/guilds/{guild_id}/members/{uid}"
-    async with aiohttp.ClientSession() as session:
-        async with session.put(url, json=payload, headers=headers) as resp:
-            if resp.status in (201, 204):
-                await interaction.followup.send(f"✅ {user.mention} was successfully added to server `{guild_id}`!", ephemeral=True)
-            elif resp.status == 200:
-                await interaction.followup.send(f"ℹ️ {user.mention} is already in server `{guild_id}`.", ephemeral=True)
-            else:
-                text = await resp.text()
-                await interaction.followup.send(f"❌ Failed ({resp.status}): {text}", ephemeral=True)
-
-
-@bot.tree.command(name="verifiedlist", description="List all verified users (Admin only)")
-@app_commands.guild_only()
-async def cmd_verifiedlist(interaction: discord.Interaction):
-    if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
-
-    if not verified_data:
-        await interaction.response.send_message("📭 No verified users yet.", ephemeral=True); return
-
-    lines = []
-    for uid, info in verified_data.items():
-        ts = info.get("verified_at", "unknown")
-        name = info.get("username", "unknown")
-        lines.append(f"• <@{uid}> (`{name}`) — {ts[:10]}")
-
-    embed = discord.Embed(
-        title="✅ Verified Users",
-        description="\n".join(lines[:25]) + ("\n…and more" if len(lines) > 25 else ""),
-        color=VALORA_COLOR
-    )
-    embed.set_footer(text=f"Total: {len(verified_data)} verified users")
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
 
 # ============================================================
 #  RUN
